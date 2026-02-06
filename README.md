@@ -34,7 +34,7 @@ timeline.json            # Timeline eventi in JSON
 
 ### Comandi Utili
 ```bash
-grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn
+grep "incorrect password" /var/log/auth.log | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn
 grep "sudo:" /var/log/auth.log | grep "COMMAND"
 awk '$9 ~ /^[45]/ {print $1, $7, $9}' /var/log/apache2/access.log
 journalctl --since "7 days ago" --priority=err
