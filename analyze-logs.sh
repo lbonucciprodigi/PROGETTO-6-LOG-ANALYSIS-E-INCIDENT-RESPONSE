@@ -13,6 +13,12 @@ done
 
 #List of TOP IP attackers
 
+FILE = "top-attacker.txt"
+
+if [! -f "FILE"]; then
+	touch "$FILE"
+fi
+
 grep "Failed password" /var/log/auth.log | awk '{print $9}' | sort | uniq -c > top-attacker.txt
 
 #List of sudo COMMAND
