@@ -2,20 +2,20 @@
 
 #Checking if IP trying to BRUTE FORCE via SSH
 
-THRESHOLD = 5
+THRESHOLD=5
 
 grep "Failed password" /var/log/auth.log | awk '{print $9}' | sort | uniq -c |
 while read count ip; do
-	if ["$count" -gt "$THRESHOLD"]; then
+	if [ "$count" -gt "$THRESHOLD" ]; then
 		echo "ALERT: IP $ip trying to BRUTE FORCE $count times"
 	fi
 done	
 
 #List of TOP IP attackers
 
-FILE = "top-attacker.txt"
+FILE="top-attacker.txt"
 
-if [! -f "FILE"]; then
+if [ ! -e "FILE" ]; then
 	touch "$FILE"
 fi
 
