@@ -40,3 +40,16 @@ awk '$9 ~ /^[45]/ {print $1, $7, $9}' /var/log/apache2/access.log
 journalctl --since "7 days ago" --priority=err
 # JSON: jq -n '{events: [...]}'
 ```
+
+
+
+
+
+###IMPORTANT
+```Run initialization.sh once when installing this for the first time
+```
+
+
+
+
+
