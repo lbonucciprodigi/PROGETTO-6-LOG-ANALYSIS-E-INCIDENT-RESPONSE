@@ -19,7 +19,7 @@ if [ ! -e "FILE" ]; then
 	touch "$FILE"
 fi
 
-grep "Failed password" /var/log/auth.log | awk '{print $9}' | sort | uniq -c > top-attacker.txt
+grep "Failed password" /var/log/auth.log | awk '{print $9}' | sort | uniq -c > | sort -rn top-attacker.txt
 
 #List of sudo COMMAND
 
