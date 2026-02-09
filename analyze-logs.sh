@@ -28,3 +28,10 @@ grep "sudo:" /var/log/auth.log | grep "COMMAND"
 #Analyze HTTP errors
 
 awk '$9 ~ /^[45]/ {print $1, $7, $9}' /var/log/apache2/access.log
+
+
+#Scanning ports
+sudo nmap localhost -oN portscan.txt
+
+#Searching the journal for suspicious activity
+journalctl -p err --since "7 days ago" -o json > timeline.json
