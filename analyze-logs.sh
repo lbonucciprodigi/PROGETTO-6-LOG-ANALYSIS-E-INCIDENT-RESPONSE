@@ -9,7 +9,7 @@ while read count ip; do
 	if [ "$count" -gt "$THRESHOLD" ]; then
 		echo "ALERT: IP $ip trying to BRUTE FORCE $count times"
 	fi
-done	
+done >> output.txt
 
 #List of TOP IP attackers
 
@@ -23,11 +23,11 @@ grep "Failed password" /var/log/auth.log | awk '{print $9}' | sort | uniq -c > t
 
 #List of sudo COMMAND
 
-grep "sudo:" /var/log/auth.log | grep "COMMAND"
+grep "sudo:" /var/log/auth.log | grep "COMMAND" >> output.txt
 
 #Analyze HTTP errors
 
-awk '$9 ~ /^[45]/ {print $1, $7, $9}' /var/log/apache2/access.log
+awk '$9 ~ /^[45]/ {print $1, $7, $9}' /var/log/apache2/access.log >> output.txt
 
 
 #Scanning ports
