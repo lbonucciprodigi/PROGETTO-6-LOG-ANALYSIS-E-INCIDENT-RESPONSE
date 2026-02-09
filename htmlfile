@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudo Command Log Analysis - Skipper</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .loading-section {
+            padding: 60px 40px;
+            text-align: center;
+            background: #f7fafc;
+        }
+        
+        .loading-spinner {
+            font-size: 4em;
+            animation: spin 2s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-section h2 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .loading-section p {
+            color: #718096;
+            font-size: 1.1em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f7fafc;
+            display: none;
+        }
+        
+        .stats-grid.active {
+            display: grid;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card p {
+            color: #4a5568;
+            font-size: 1.1em;
+        }
+        
+        .charts-section {
+            padding: 40px;
+            display: none;
+        }
+        
+        .charts-section.active {
+            display: block;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .chart-container h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .log-table-container {
+            padding: 40px;
+            background: #f7fafc;
+            display: none;
+        }
+        
+        .log-table-container.active {
+            display: block;
+        }
+        
+        .log-table-container h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+        
+        th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+        
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        .command-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #2d3748;
+        }
+        
+        .date-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #667eea;
+            color: white;
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+        
+        canvas {
+            max-height: 400px;
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 40px;
+            display: none;
+        }
+        
+        .error-message.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Sudo Command Log Analysis</h1>
+            <p>System: Skipper | User: leonardobonucci | Project: LOG-ANALYSIS-E-INCIDENT-RESPONSE</p>
+        </header>
+        
+        <div class="loading-section" id="loadingSection">
+            <div class="loading-spinner">⏳</div>
+            <h2>Loading output.txt...</h2>
+            <p>Please wait while we analyze your log file</p>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3 id="totalCommands">0</h3>
+                <p>Total Commands</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="daysActive">0</h3>
+                <p>Days Active</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="uniqueCommands">0</h3>
+                <p>Unique Commands</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="mostUsed">-</h3>
+                <p>Most Used Command</p>
+            </div>
+        </div>
+        
+        <div class="charts-section" id="chartsSection">
+            <div class="chart-container">
+                <h2>📊 Command Frequency Distribution</h2>
+                <canvas id="commandChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2>⏱️ Activity Timeline (by Hour)</h2>
+                <canvas id="timelineChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2>📅 Commands by Date</h2>
+                <canvas id="dateChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="log-table-container" id="logTableContainer">
+            <h2>📋 Complete Command Log</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Command</th>
+                        <th>Working Directory</th>
+                    </tr>
+                </thead>
+                <tbody id="logTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        let commandChart, timelineChart, dateChart;
+        
+        // Auto-load output.txt on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLogFile();
+        });
+        
+        async function loadLogFile() {
+            try {
+                const response = await fetch('output.txt');
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load output.txt (${response.status}). Make sure output.txt is in the same directory as this HTML file.`);
+                }
+                
+                const content = await response.text();
+                const logs = parseLogFile(content);
+                
+                if (logs.length === 0) {
+                    throw new Error('No valid log entries found in output.txt');
+                }
+                
+                displayAnalysis(logs);
+                hideError();
+            } catch (error) {
+                showError(error.message);
+                document.getElementById('loadingSection').style.display = 'none';
+            }
+        }
+        
+        function parseLogFile(content) {
+            const lines = content.trim().split('\n');
+            const logs = [];
+            
+            // Regex to parse sudo log format
+            const logRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2})\s+\S+\s+sudo:\s+\S+\s+:\s+TTY=\S+\s+;\s+PWD=(.+?)\s+;\s+USER=\S+\s+;\s+COMMAND=(.+)$/;
+            
+            lines.forEach(line => {
+                const match = line.match(logRegex);
+                if (match) {
+                    logs.push({
+                        time: match[1],
+                        pwd: match[2],
+                        cmd: match[3].replace(/^\/usr\/bin\//, '').replace(/^\/bin\//, '')
+                    });
+                }
+            });
+            
+            return logs;
+        }
+        
+        function displayAnalysis(logs) {
+            // Hide loading section
+            document.getElementById('loadingSection').style.display = 'none';
+            
+            // Show analysis sections
+            document.getElementById('statsGrid').classList.add('active');
+            document.getElementById('chartsSection').classList.add('active');
+            document.getElementById('logTableContainer').classList.add('active');
+            
+            // Calculate statistics
+            const cmdCount = {};
+            const dateSet = new Set();
+            
+            logs.forEach(log => {
+                const baseCmd = log.cmd.split(' ')[0];
+                cmdCount[baseCmd] = (cmdCount[baseCmd] || 0) + 1;
+                dateSet.add(log.time.split('T')[0]);
+            });
+            
+            const mostUsedCmd = Object.entries(cmdCount).sort((a, b) => b[1] - a[1])[0];
+            
+            // Update statistics
+            document.getElementById('totalCommands').textContent = logs.length;
+            document.getElementById('daysActive').textContent = dateSet.size;
+            document.getElementById('uniqueCommands').textContent = Object.keys(cmdCount).length;
+            document.getElementById('mostUsed').textContent = `${mostUsedCmd[0]} (${mostUsedCmd[1]}×)`;
+            
+            // Populate table
+            const tableBody = document.getElementById('logTable');
+            tableBody.innerHTML = '';
+            logs.forEach(log => {
+                const date = new Date(log.time);
+                const row = `
+                    <tr>
+                        <td><span class="date-badge">${date.toLocaleString('en-GB')}</span></td>
+                        <td class="command-cell">${log.cmd}</td>
+                        <td style="font-size: 0.85em; color: #718096;">${log.pwd}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+            
+            // Create charts
+            createCommandChart(cmdCount);
+            createTimelineChart(logs);
+            createDateChart(logs);
+        }
+        
+        function createCommandChart(cmdCount) {
+            const ctx = document.getElementById('commandChart');
+            if (commandChart) commandChart.destroy();
+            
+            commandChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(cmdCount),
+                    datasets: [{
+                        label: 'Command Usage Count',
+                        data: Object.values(cmdCount),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                            '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+                            '#a8edea', '#fed6e3', '#c471ed'
+                        ],
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createTimelineChart(logs) {
+            const hourCount = {};
+            logs.forEach(log => {
+                const hour = new Date(log.time).getHours();
+                hourCount[hour] = (hourCount[hour] || 0) + 1;
+            });
+            
+            const hours = Array.from({length: 24}, (_, i) => i);
+            const hourData = hours.map(h => hourCount[h] || 0);
+            
+            const ctx = document.getElementById('timelineChart');
+            if (timelineChart) timelineChart.destroy();
+            
+            timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours.map(h => `${h}:00`),
+                    datasets: [{
+                        label: 'Commands per Hour',
+                        data: hourData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createDateChart(logs) {
+            const dateCount = {};
+            logs.forEach(log => {
+                const date = log.time.split('T')[0];
+                dateCount[date] = (dateCount[date] || 0) + 1;
+            });
+            
+            const ctx = document.getElementById('dateChart');
+            if (dateChart) dateChart.destroy();
+            
+            const colors = ['#764ba2', '#667eea', '#f093fb', '#4facfe', '#43e97b'];
+            
+            dateChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(dateCount),
+                    datasets: [{
+                        label: 'Commands per Day',
+                        data: Object.values(dateCount),
+                        backgroundColor: colors.slice(0, Object.keys(dateCount).length),
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 5 }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = '❌ Error: ' + message;
+            errorDiv.classList.add('active');
+        }
+        
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
