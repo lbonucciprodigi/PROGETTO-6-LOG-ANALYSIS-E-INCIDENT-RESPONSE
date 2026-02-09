@@ -2,6 +2,7 @@
 # Sudo Log Analyzer - Generates HTML report from output.txt
 # Reads output.txt and creates sudo_log_report.html with interactive visualizations
 
+
 import re
 from datetime import datetime
 from collections import Counter, defaultdict

@@ -35,3 +35,6 @@ sudo nmap localhost -oN portscan.txt
 
 #Searching the journal for suspicious activity
 journalctl -p err --since "7 days ago" -o json > timeline.json
+
+
+python3 htmlfile.py
